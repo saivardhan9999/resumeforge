@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}ResumeForge Dashboard{% endblock %}
+
+{% block content %}
+<header class="site-nav dashboard-nav">
+  <a class="brand" href="{{ url_for('dashboard') }}"><span>RF</span>ResumeForge</a>
+  <nav>
+    <a href="#generator">Generator</a>
+    <a href="#library">Library</a>
+    <a href="#preview">Preview</a>
+    <form method="post" action="{{ url_for('logout') }}">
+      <button class="ghost-btn" type="submit">Logout</button>
+    </form>
+  </nav>
+</header>
+
+<main class="dashboard-shell">
+  <section class="dashboard-hero" data-reveal>
+    <div>
+      <p class="eyebrow">Welcome back, {{ user.name }}</p>
+      <h1>Build the resume version for the job you actually want.</h1>
+      <p>Generate, score, save, and refine resumes from one mustard-gold command center.</p>
+    </div>
+    <aside class="credit-card">
+      <span>Daily credits</span>
+      <strong>20</strong>
+      <p>{{ saved_count }} saved resumes / Avg ATS {{ avg_score }}%</p>
+    </aside>
+  </section>
+
+  <section class="tool-grid">
+    <form id="generator" class="generator-card" method="post" action="{{ url_for('generate_resume') }}" data-reveal>
+      <div class="tabs">
+        <span class="active">Resume Generator</span>
+        <span>ATS Tune</span>
+        <span>Cover Note</span>
+      </div>
+      <label>Name <input name="name" placeholder="Your name" required></label>
+      <label>Target role <input name="role" placeholder="Frontend Developer" required></label>
+      <label>Experience <textarea name="experience" placeholder="Built projects, led clubs, shipped dashboards..." required></textarea></label>
+      <label>Skills <input name="skills" placeholder="Python, Flask, HTML, CSS, SQL"></label>
+      <label>Job keywords <input name="keywords" placeholder="internship, dashboard, analytics, responsive"></label>
+      <label>Template
+        <select name="template">
+          {% for name in templates.keys() %}
+            <option value="{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="primary-btn" type="submit">Generate</button>
+      <small>Resumes should not contain fake companies or claims. Keep it honest, just sharper.</small>
+    </form>
+
+    <section id="preview" class="resume-preview" data-reveal>
+      {% if active %}
+        <div class="resume-paper" style="--paper-accent: {{ templates[active.template].accent }}">
+          <header>
+            <div>
+              <h2>{{ active.name }}</h2>
+              <p>{{ active.role }}</p>
+            </div>
+            <strong>{{ active.score }}%</strong>
+          </header>
+          <section>
+            <h3>Summary</h3>
+            <p>{{ active.summary }}</p>
+          </section>
+          <section>
+            <h3>Skills</h3>
+            <div class="skill-list">
+              {% for skill in active.skills %}
+                <span>{{ skill }}</span>
+              {% endfor %}
+            </div>
+          </section>
+          <section>
+            <h3>Experience Highlights</h3>
+            <ul>
+              {% for bullet in active.bullets %}
+                <li>{{ bullet }}</li>
+              {% endfor %}
+            </ul>
+          </section>
+        </div>
+      {% endif %}
+    </section>
+  </section>
+
+  <section class="template-strip" data-reveal>
+    {% for name, item in templates.items() %}
+      <article style="--accent: {{ item.accent }}">
+        <span>{{ name }}</span>
+        <strong>{{ item.tone }}</strong>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section id="library" class="library-section">
+    <div class="section-heading" data-reveal>
+      <p class="eyebrow">Resume library</p>
+      <h2>Saved drafts and generated versions.</h2>
+    </div>
+    <div class="library-grid">
+      {% for resume in resumes %}
+        <article class="resume-card" data-reveal>
+          <div class="doc-art"></div>
+          <span>{{ resume.template }}</span>
+          <h3>{{ resume.name }}</h3>
+          <p>{{ resume.role }}</p>
+          <strong>{{ resume.score }}% ATS fit</strong>
+          <div class="card-actions">
+            <a class="ghost-btn" href="{{ url_for('dashboard', resume=resume.id) }}#preview">Preview</a>
+            <form method="post" action="{{ url_for('resume_action', resume_id=resume.id, action='save') }}">
+              <button class="ghost-btn" type="submit">{{ "Unsave" if resume.saved else "Save" }}</button>
+            </form>
+            <form method="post" action="{{ url_for('resume_action', resume_id=resume.id, action='boost') }}">
+              <button class="ghost-btn" type="submit">Boost</button>
+            </form>
+            <form method="post" action="{{ url_for('resume_action', resume_id=resume.id, action='delete') }}">
+              <button class="danger-btn" type="submit">Delete</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

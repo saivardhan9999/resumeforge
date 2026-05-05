@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}ResumeForge Login{% endblock %}
+
+{% block content %}
+<header class="site-nav">
+  <a class="brand" href="{{ url_for('login') }}">
+    <span>RF</span>
+    ResumeForge
+  </a>
+  <nav>
+    <a href="#generator">Create Resume</a>
+    <a href="#examples">Examples</a>
+    <a href="#steps">How it works</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+</header>
+
+<main class="home-shell">
+  <section class="hero-panel" data-reveal>
+    <div class="hero-copy">
+      <p class="eyebrow">AI resume maker</p>
+      <h1>Forge job-ready resumes in minutes.</h1>
+      <p>Create recruiter-friendly resumes, tune keywords for a role, and keep polished versions ready for every application.</p>
+      <a class="primary-link" href="#generator">Try ResumeForge for free >></a>
+    </div>
+
+    <div id="generator" class="generator-mock">
+      <div class="tabs">
+        <span class="active">Resume Builder</span>
+        <span>Cover Letter</span>
+        <span>ATS Score</span>
+      </div>
+      <div class="mock-field tall">
+        <b>Experience</b>
+        <p>Built dashboards, shipped projects, improved workflows...</p>
+      </div>
+      <div class="chip-row">
+        <span># Technical</span>
+        <span># Executive</span>
+        <span># Student</span>
+        <span># Creative</span>
+      </div>
+      <button>Generate Resume</button>
+    </div>
+  </section>
+
+  <section class="auth-card" data-reveal>
+    <p class="eyebrow">Welcome to ResumeForge</p>
+    <h2>{{ "Create account" if mode == "register" else "Sign in" }}</h2>
+    <p class="credits">Sign in to get 20 resume credits daily and save unlimited drafts.</p>
+    {% if message %}
+      <p class="message">{{ message }}</p>
+    {% endif %}
+    <form method="post" class="auth-form">
+      <input type="hidden" name="mode" value="{{ mode }}">
+      {% if mode == "register" %}
+        <label>Name <input name="name" placeholder="Sai Vardhan" autocomplete="name"></label>
+      {% endif %}
+      <label>Email <input type="email" name="email" placeholder="you@example.com" autocomplete="email"></label>
+      <label>Password <input type="password" name="password" placeholder="Demo password" autocomplete="current-password"></label>
+      <button class="primary-btn" type="submit">{{ "Create workspace" if mode == "register" else "Enter builder" }}</button>
+    </form>
+    <div class="divider"><span>OR</span></div>
+    <a class="magic-link" href="{{ url_for('login') }}?mode={{ 'login' if mode == 'register' else 'register' }}">
+      {{ "Already have an account?" if mode == "register" else "Need an account?" }}
+    </a>
+  </section>
+</main>
+
+<section id="examples" class="discover-section">
+  <div class="section-heading" data-reveal>
+    <p class="eyebrow">Discover the power of ResumeForge</p>
+    <h2>Resume examples built for different career paths.</h2>
+  </div>
+  <div class="example-grid">
+    <article data-reveal>
+      <div class="doc-art"></div>
+      <h3>Frontend Developer</h3>
+      <p>React, TypeScript, accessibility, performance wins.</p>
+      <span>Aarav 91%</span>
+    </article>
+    <article data-reveal>
+      <div class="doc-art"></div>
+      <h3>Marketing Analyst</h3>
+      <p>Dashboards, funnel analysis, campaign experiments.</p>
+      <span>Maya 86%</span>
+    </article>
+    <article data-reveal>
+      <div class="doc-art"></div>
+      <h3>Student Intern</h3>
+      <p>Projects, coursework, campus leadership, skills.</p>
+      <span>Riya 88%</span>
+    </article>
+    <article data-reveal>
+      <div class="doc-art"></div>
+      <h3>Product Manager</h3>
+      <p>Roadmaps, research, launch metrics, collaboration.</p>
+      <span>Dev 93%</span>
+    </article>
+  </div>
+</section>
+
+<section id="steps" class="steps-section">
+  <div class="section-heading" data-reveal>
+    <p class="eyebrow">How to make a resume</p>
+    <h2>Follow three simple steps.</h2>
+  </div>
+  <div class="steps-grid">
+    <article data-reveal><span>Step 1</span><h3>Add your role and experience</h3><p>Paste rough work history, projects, keywords, and target title.</p></article>
+    <article data-reveal><span>Step 2</span><h3>Choose style and template</h3><p>Pick executive, creative, technical, or student layouts.</p></article>
+    <article data-reveal><span>Step 3</span><h3>Generate and save</h3><p>Review the score, save versions, and improve application fit.</p></article>
+  </div>
+</section>
+
+<section class="feature-band">
+  <div data-reveal>
+    <p class="eyebrow">Create resume with ResumeForge</p>
+    <h2>Stop staring at a blank document.</h2>
+    <p>ResumeForge converts messy experience into clean summaries, skills, and achievement bullets that feel sharp without becoming fake.</p>
+  </div>
+  <div class="feature-visual" data-reveal></div>
+</section>
+
+<section id="faq" class="faq-section">
+  <div class="section-heading" data-reveal>
+    <p class="eyebrow">FAQ</p>
+    <h2>ResumeForge FAQs</h2>
+  </div>
+  <details data-reveal open><summary>Is this a real AI resume generator?</summary><p>This portfolio version uses rule-based generation to create realistic resume drafts without needing paid APIs.</p></details>
+  <details data-reveal><summary>Can different users save different resumes?</summary><p>Yes. Each registered user gets a separate local JSON workspace.</p></details>
+  <details data-reveal><summary>Can I make resumes for multiple job roles?</summary><p>Yes. Generate multiple versions, save the strongest ones, boost scores, or delete older drafts.</p></details>
+</section>
+{% endblock %}
