@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import textwrap
 import uuid
 from pathlib import Path
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, send_file, session, url_for
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.platypus import Paragraph
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,6 +39,11 @@ SEED_RESUMES = [
         "template": "Technical",
         "score": 91,
         "summary": "Frontend developer building fast React interfaces, design systems, and accessible dashboards.",
+        "contact": {"phone": "9963756412", "email": "aarav@example.com", "github": "github.com/aarav", "linkedin": "linkedin.com/in/aarav"},
+        "education": ["SRM Institute of Science and Technology | B.Tech - Computer Science and Engineering | 2023-2027 | CGPA-9.2"],
+        "experience": ["Frontend Intern | Built reusable UI components and improved Lighthouse performance across product pages."],
+        "projects": ["Portfolio Dashboard | Built a responsive React dashboard with reusable charts, filters, and API-driven views."],
+        "certifications": ["Responsive Web Design - freeCodeCamp", "JavaScript Algorithms - freeCodeCamp"],
         "skills": ["React", "TypeScript", "Tailwind", "REST APIs", "Testing"],
         "bullets": [
             "Built reusable UI components that reduced feature delivery time by 28%.",
@@ -46,6 +59,11 @@ SEED_RESUMES = [
         "template": "Executive",
         "score": 86,
         "summary": "Data-driven marketing analyst turning campaign signals into growth experiments.",
+        "contact": {"phone": "9000000000", "email": "maya@example.com", "github": "github.com/maya", "linkedin": "linkedin.com/in/maya"},
+        "education": ["Andhra University | BBA - Marketing Analytics | 2021-2024 | CGPA-8.8"],
+        "experience": ["Marketing Analyst Intern | Built campaign dashboards and identified funnel drop-offs that improved conversion."],
+        "projects": ["Campaign ROI Tracker | Developed a spreadsheet dashboard for paid, organic, and lifecycle channels."],
+        "certifications": ["Google Analytics Certification", "Excel for Business Analytics"],
         "skills": ["SQL", "Excel", "Campaign Strategy", "GA4", "Storytelling"],
         "bullets": [
             "Identified funnel drop-offs that lifted trial conversion by 13%.",
@@ -112,6 +130,11 @@ def split_values(value: str) -> list[str]:
     return [item.strip() for item in value.replace("\n", ",").split(",") if item.strip()]
 
 
+def split_lines(value: str) -> list[str]:
+    value = value.replace("\\n", "\n")
+    return [item.strip(" -\t") for item in value.splitlines() if item.strip(" -\t")]
+
+
 def build_resume(form) -> dict:
     role = form.get("role", "Software Developer").strip()
     experience = form.get("experience", "Built projects, improved workflows, collaborated with teams").strip()
@@ -125,6 +148,15 @@ def build_resume(form) -> dict:
         f"Translated {', '.join(keywords[:3]) or 'business goals'} into resume-ready achievements and clean portfolio proof.",
         f"Strengthened communication, ownership, and execution across {experience[:58].lower()}.",
     ]
+    education = split_lines(form.get("education", "")) or [
+        "SRM Institute of Science and Technology | B.Tech - Computer Science and Engineering | 2023-2027 | CGPA-9.2"
+    ]
+    projects = split_lines(form.get("projects", "")) or [
+        f"{role} Portfolio Project | Built a polished application using {', '.join(skills[:4])} with responsive design and practical workflows."
+    ]
+    certifications = split_lines(form.get("certifications", "")) or [
+        "Python Programming Certification", "Web Development Fundamentals"
+    ]
     return {
         "id": uuid.uuid4().hex,
         "name": form.get("name", "Your Name").strip(),
@@ -132,10 +164,141 @@ def build_resume(form) -> dict:
         "template": template,
         "score": score,
         "summary": f"{role} with practical experience in {', '.join(skills[:4])}, focused on clear outcomes and recruiter-friendly impact.",
+        "contact": {
+            "phone": form.get("phone", "9963756412").strip(),
+            "email": form.get("email", "you@example.com").strip(),
+            "github": form.get("github", "github.com/username").strip(),
+            "linkedin": form.get("linkedin", "linkedin.com/in/username").strip(),
+        },
+        "education": education,
+        "experience": [experience, *bullets[:2]],
+        "projects": projects,
+        "certifications": certifications,
         "skills": skills[:8],
         "bullets": bullets,
         "saved": True,
     }
+
+
+def fit_text(canvas, text: str, x: float, y: float, max_width: float, font_name: str, font_size: int, min_size: int = 7) -> int:
+    size = font_size
+    while size > min_size and stringWidth(text, font_name, size) > max_width:
+        size -= 1
+    canvas.setFont(font_name, size)
+    canvas.drawString(x, y, text)
+    return size
+
+
+def draw_wrapped(canvas, text: str, x: float, y: float, width: float, font_name: str = "Times-Roman", font_size: int = 10, leading: int = 13, bullet: bool = False) -> float:
+    prefix = "- " if bullet else ""
+    lines = textwrap.wrap(prefix + text, width=max(45, int(width / (font_size * 0.48))))
+    canvas.setFont(font_name, font_size)
+    for line in lines:
+        canvas.drawString(x, y, line)
+        y -= leading
+    return y
+
+
+def draw_section(canvas, title: str, x: float, y: float) -> float:
+    canvas.setFont("Times-Bold", 13)
+    canvas.drawString(x, y, title.upper())
+    return y - 18
+
+
+def resume_pdf_bytes(resume: dict) -> bytes:
+    buffer = io.BytesIO()
+    canvas = __import__("reportlab.pdfgen.canvas", fromlist=["Canvas"]).Canvas(buffer, pagesize=letter)
+    width, height = letter
+    left = 0.63 * inch
+    right = width - 0.63 * inch
+    y = height - 0.68 * inch
+
+    def new_page_if_needed(current_y: float, needed: float = 70) -> float:
+        if current_y > needed:
+            return current_y
+        canvas.showPage()
+        return height - 0.62 * inch
+
+    name = resume.get("name", "Your Name").upper()
+    fit_text(canvas, name, left, y, right - left, "Times-Bold", 23, 13)
+    y -= 18
+    contact = resume.get("contact", {})
+    contact_line = " | ".join(
+        item for item in [contact.get("phone"), contact.get("email"), contact.get("github"), contact.get("linkedin")] if item
+    )
+    fit_text(canvas, contact_line, left, y, right - left, "Times-Roman", 8, 6)
+    y -= 17
+    canvas.setStrokeColor(colors.black)
+    canvas.setLineWidth(1.3)
+    canvas.line(left, y, right, y)
+    y -= 18
+
+    y = draw_section(canvas, "Education", left, y)
+    for item in resume.get("education", []):
+        parts = [part.strip() for part in item.split("|")]
+        school = parts[0] if parts else item
+        degree = parts[1] if len(parts) > 1 else ""
+        date = parts[2] if len(parts) > 2 else ""
+        score = parts[3] if len(parts) > 3 else ""
+        canvas.setFont("Times-Roman", 11)
+        canvas.drawString(left, y, school)
+        if date:
+            canvas.drawRightString(right - 28, y, date)
+        y -= 14
+        if degree:
+            canvas.drawString(left, y, degree)
+        if score:
+            canvas.drawRightString(right - 28, y, score)
+        y -= 20
+
+    y = new_page_if_needed(y)
+    y = draw_section(canvas, "Technical Skills", left, y)
+    skill_groups = [
+        ("Core Skills", ", ".join(resume.get("skills", [])[:5])),
+        ("Tools & Technologies", ", ".join(resume.get("skills", [])[5:]) or "Git, VS Code, APIs, Responsive Design"),
+    ]
+    for label, value in skill_groups:
+        canvas.setFont("Times-Bold", 10.5)
+        canvas.drawString(left + 18, y, f"-  {label}:")
+        canvas.setFont("Times-Roman", 10.5)
+        canvas.drawString(left + 130, y, value)
+        y -= 14
+    y -= 8
+
+    y = new_page_if_needed(y)
+    y = draw_section(canvas, "Work Experience", left, y)
+    experience = resume.get("experience", [])
+    heading = experience[0] if experience else resume.get("role", "Professional Experience")
+    heading_parts = [part.strip() for part in heading.split("|")]
+    canvas.setFont("Times-Bold", 10.5)
+    canvas.drawString(left, y, " | ".join(heading_parts[:-1]) if len(heading_parts) > 1 else heading_parts[0])
+    if len(heading_parts) > 1:
+        canvas.drawRightString(right - 28, y, heading_parts[-1])
+    y -= 14
+    for item in experience[1:] or resume.get("bullets", []):
+        y = draw_wrapped(canvas, item, left + 34, y, right - left - 48, bullet=True)
+    y -= 8
+
+    y = new_page_if_needed(y)
+    y = draw_section(canvas, "Projects", left, y)
+    for project in resume.get("projects", []):
+        y = new_page_if_needed(y)
+        title, _, detail = project.partition("|")
+        canvas.setFont("Times-Bold", 10.5)
+        canvas.drawString(left, y, title.strip())
+        y -= 14
+        if detail:
+            y = draw_wrapped(canvas, detail.strip(), left + 34, y, right - left - 48, bullet=True)
+        y -= 6
+
+    y = new_page_if_needed(y)
+    y = draw_section(canvas, "Certifications", left, y)
+    for cert in resume.get("certifications", []):
+        y = draw_wrapped(canvas, cert, left + 18, y, right - left - 28, bullet=True)
+
+    canvas.save()
+    buffer.seek(0)
+    return buffer.read()
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -217,6 +380,23 @@ def resume_action(resume_id: str, action: str):
         break
     save_user_resumes(user["id"], resumes)
     return redirect(url_for("dashboard"))
+
+
+@app.route("/resume/<resume_id>/download")
+def download_resume(resume_id: str):
+    user = current_user()
+    if not user:
+        return redirect(url_for("login"))
+    resume = next((item for item in user_resumes(user["id"]) if item["id"] == resume_id), None)
+    if not resume:
+        return redirect(url_for("dashboard"))
+    filename = f"{resume.get('name', 'resume').lower().replace(' ', '_')}_resume.pdf"
+    return send_file(
+        io.BytesIO(resume_pdf_bytes(resume)),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @app.route("/logout", methods=["POST"])

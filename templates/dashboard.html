@@ -37,8 +37,19 @@
         <span>Cover Note</span>
       </div>
       <label>Name <input name="name" placeholder="Your name" required></label>
+      <div class="field-row">
+        <label>Phone <input name="phone" placeholder="9963756412"></label>
+        <label>Email <input name="email" placeholder="you@example.com"></label>
+      </div>
+      <div class="field-row">
+        <label>GitHub <input name="github" placeholder="github.com/username"></label>
+        <label>LinkedIn <input name="linkedin" placeholder="linkedin.com/in/username"></label>
+      </div>
       <label>Target role <input name="role" placeholder="Frontend Developer" required></label>
+      <label>Education <textarea name="education" placeholder="SRM Institute of Science and Technology | B.Tech - Computer Science and Engineering | 2023-2027 | CGPA-9.2"></textarea></label>
       <label>Experience <textarea name="experience" placeholder="Built projects, led clubs, shipped dashboards..." required></textarea></label>
+      <label>Projects <textarea name="projects" placeholder="Project Name | Built a full-stack app using Python Flask, HTML, CSS, and JavaScript.&#10;Another Project | Developed a dashboard with charts, filters, and responsive UI."></textarea></label>
+      <label>Certifications <textarea name="certifications" placeholder="Introduction to Machine Learning - IIT Kharagpur&#10;Programming in Java - IIT Kharagpur"></textarea></label>
       <label>Skills <input name="skills" placeholder="Python, Flask, HTML, CSS, SQL"></label>
       <label>Job keywords <input name="keywords" placeholder="internship, dashboard, analytics, responsive"></label>
       <label>Template
@@ -75,6 +86,14 @@
             </div>
           </section>
           <section>
+            <h3>Education</h3>
+            <ul>
+              {% for education in active.education or [] %}
+                <li>{{ education }}</li>
+              {% endfor %}
+            </ul>
+          </section>
+          <section>
             <h3>Experience Highlights</h3>
             <ul>
               {% for bullet in active.bullets %}
@@ -82,7 +101,16 @@
               {% endfor %}
             </ul>
           </section>
+          <section>
+            <h3>Projects</h3>
+            <ul>
+              {% for project in active.projects or [] %}
+                <li>{{ project }}</li>
+              {% endfor %}
+            </ul>
+          </section>
         </div>
+        <a class="primary-btn download-btn" href="{{ url_for('download_resume', resume_id=active.id) }}">Download PDF</a>
       {% endif %}
     </section>
   </section>
@@ -111,6 +139,7 @@
           <strong>{{ resume.score }}% ATS fit</strong>
           <div class="card-actions">
             <a class="ghost-btn" href="{{ url_for('dashboard', resume=resume.id) }}#preview">Preview</a>
+            <a class="ghost-btn" href="{{ url_for('download_resume', resume_id=resume.id) }}">PDF</a>
             <form method="post" action="{{ url_for('resume_action', resume_id=resume.id, action='save') }}">
               <button class="ghost-btn" type="submit">{{ "Unsave" if resume.saved else "Save" }}</button>
             </form>
